@@ -10,11 +10,12 @@ import javafx.util.Pair;
 
 public class Game 
 {
-	ArrayList<Piece> redPieces = new ArrayList<Piece>();
-	ArrayList<Piece> blackPieces = new ArrayList<Piece>();
-	ArrayList<Piece> allPieces = new ArrayList<Piece>();
+	ArrayList<Piece> redPieces = new ArrayList<>();
+	ArrayList<Piece> blackPieces = new ArrayList<>();
+	ArrayList<Piece> allPieces = new ArrayList<>();
 	Position[] positions = new Position[32];
-	HashMap<String, Integer> positionFinder =  new HashMap<String, Integer>();
+	HashMap<String, Integer> positionFinder =  new HashMap<>();
+	HashMap<String, Piece> pieceFinder = new HashMap<>();
 	PositionStatus turn = PositionStatus.Empty;
 	boolean noJumps = true;
 	public Game() 
@@ -66,7 +67,10 @@ public class Game
 //		}
 		blackPieces.add(new Piece(new Circle(200, 120, 30, Color.BLACK), PieceStatus.Stone));
 //		blackPieces.add(new Piece(new Circle(360, 440, 30, Color.BLACK), PieceStatus.Stone));
+//		pieceFinder.put("" + 360.0 + 440.0, blackPieces.get(0));
+		pieceFinder.put("" + 200.0 + 120.0, blackPieces.get(0));
 		redPieces.add(new Piece(new Circle(280, 520, 30, Color.RED), PieceStatus.Stone));
+		pieceFinder.put("" + 280.0 + 520.0, redPieces.get(0));
 		allPieces.addAll(redPieces);
 		allPieces.addAll(blackPieces);
 		updateBoard();
@@ -78,59 +82,84 @@ public class Game
 		for(int i = 0; i < blackPieces.size(); i++)
 			positions[positionFinder.get(blackPieces.get(i).getPositionDictionaryKey())].setStatus(PositionStatus.Black);
 	}
-	public ArrayList<Pair<Position, Integer>> availableMoves(ArrayList<Piece> pieces, PositionStatus team) 
+	public ArrayList<Pair<Piece, ArrayList<Position>>> scanForAllMoves()
 	{
-		ArrayList<Pair<Position, Integer>> jumps = new ArrayList<Pair<Position, Integer>>();		
-		ArrayList<Pair<Position,  Integer>> moves = new ArrayList<Pair<Position, Integer>>();
-		Position curPosition = null;
-		//code written to check moves for red player. Will need to edit to include black player.
+		ArrayList<Piece> pieces = new ArrayList<Piece>();
+		ArrayList<Pair<Piece, ArrayList<Position>>> moves = new ArrayList<>();
+		if(turn == PositionStatus.Red)
+			pieces = redPieces;
+		else
+			pieces = blackPieces;
 		for(int i = 0; i < pieces.size(); i++) 
+			moves.add(new Pair<>(pieces.get(i), scanPieceForMoves(pieces.get(i))));
+		return moves;
+	}
+	public ArrayList<Position> scanPieceForMoves(Piece piece) 
+	{
+		ArrayList<Position> moves = new ArrayList<Position>();
+		ArrayList<Position> jumps = new ArrayList<Position>();
+		double x = piece.getCircle().getCenterX();
+		double y = piece.getCircle().getCenterY();
+		Position move = null;
+		Position jump = null;
+		if(x != 120 && y != 120 && (piece.getStatus() == PieceStatus.King || turn == PositionStatus.Red)) 
 		{
-			double x = pieces.get(i).getCircle().getCenterX();
-			double y = pieces.get(i).getCircle().getCenterY();
-			if(x != 120 && y != 120 && (pieces.get(i).getStatus() == PieceStatus.King || team == PositionStatus.Red)) 
-			{
-				curPosition = positions[positionFinder.get("" + (x - 120) + (y - 120))];
-				if(jumps.size() == 0 && curPosition.getStatus() == PositionStatus.Empty) 
-					moves.add(new Pair<>(curPosition, i));
-				else if(x != 200 | y != 200 && curPosition.getStatus() != team && 
-						positions[positionFinder.get("" + (x - 200) + (y - 200))].getStatus() == PositionStatus.Empty)
-					jumps.add(new Pair<>(positions[positionFinder.get("" + (x - 200) + (y - 200))], i));
-			}
 			
-			if(x != 680 && y != 120 && (pieces.get(i).getStatus() == PieceStatus.King || team == PositionStatus.Red)) 
+			move = positions[positionFinder.get("" + (x - 120) + (y - 120))];
+			jump = positions[positionFinder.get("" + (x - 200) + (y - 200))];
+			if(noJumps && move.getStatus() == PositionStatus.Empty) 
+				moves.add(move);
+			else if(x != 200 | y != 200 && move.getStatus() != turn && 
+					jump.getStatus() == PositionStatus.Empty)
 			{
-				curPosition = positions[positionFinder.get("" + (x + 40) + (y - 120))];
-				if(jumps.size() == 0 && curPosition.getStatus() == PositionStatus.Empty) 
-					moves.add(new Pair<>(curPosition, i));
-				else if(x != 600 | y != 200 && curPosition.getStatus() != team &&
-						positions[positionFinder.get("" + (x + 120) + (y - 200))].getStatus() == PositionStatus.Empty)
-					jumps.add(new Pair<>(positions[positionFinder.get("" + (x + 120) + (y - 200))], i));
-			}
-			
-			if(x != 120 && y != 680 && (pieces.get(i).getStatus() == PieceStatus.King || team == PositionStatus.Black)) 
-			{
-				curPosition = positions[positionFinder.get("" + (x - 120) + (y + 40))];
-				if(jumps.size() == 0 && curPosition.getStatus() == PositionStatus.Empty) 
-					moves.add(new Pair<>(curPosition, i));
-				else if(x != 200 | y != 600 && curPosition.getStatus() != team &&
-						positions[positionFinder.get("" + (x - 200) + (y + 120))].getStatus() == PositionStatus.Empty)
-					jumps.add(new Pair<>(positions[positionFinder.get("" + (x - 200) + (y + 120))], i));
-			}
-			
-			if(x != 680 && y != 680 && (pieces.get(i).getStatus() == PieceStatus.King || team == PositionStatus.Black)) 
-			{
-				curPosition = positions[positionFinder.get("" + (x + 40) + (y + 40))];
-				if(jumps.size() == 0 && curPosition.getStatus() == PositionStatus.Empty) 
-					moves.add(new Pair<>(curPosition, i));
-				else if(x != 600 | y != 600 && curPosition.getStatus() != team && 
-						positions[positionFinder.get("" + (x + 120) + (y + 120))].getStatus() == PositionStatus.Empty)
-					jumps.add(new Pair<>(positions[positionFinder.get("" + (x + 120) + (y + 120))], i));
+				jumps.add(jump);
+				noJumps = false;
 			}
 		}
-		if(jumps.size() == 0)
+		
+		if(x != 680 && y != 120 && (piece.getStatus() == PieceStatus.King || turn == PositionStatus.Red)) 
+		{
+			move = positions[positionFinder.get("" + (x + 40) + (y - 120))];
+			jump = positions[positionFinder.get("" + (x + 120) + (y - 200))];
+			if(noJumps && move.getStatus() == PositionStatus.Empty) 
+				moves.add(move);
+			else if(x != 600 | y != 200 && move.getStatus() != turn &&
+					jump.getStatus() == PositionStatus.Empty)
+			{
+				jumps.add(jump);
+				noJumps = false;
+			}
+		}
+		
+		if(x != 120 && y != 680 && (piece.getStatus() == PieceStatus.King || turn == PositionStatus.Black)) 
+		{
+			move = positions[positionFinder.get("" + (x - 120) + (y + 40))];
+			jump = positions[positionFinder.get("" + (x - 200) + (y + 120))];
+			if(noJumps && move.getStatus() == PositionStatus.Empty) 
+				moves.add(move);
+			else if(x != 200 | y != 600 && move.getStatus() != turn &&
+					positions[positionFinder.get("" + (x - 200) + (y + 120))].getStatus() == PositionStatus.Empty)
+			{
+				jumps.add(jump);
+				noJumps = false;
+			}
+		}
+		
+		if(x != 680 && y != 680 && (piece.getStatus() == PieceStatus.King || turn == PositionStatus.Black)) 
+		{
+			move = positions[positionFinder.get("" + (x + 40) + (y + 40))];
+			jump = positions[positionFinder.get("" + (x + 120) + (y + 120))];
+			if(jumps.size() == 0 && move.getStatus() == PositionStatus.Empty) 
+				moves.add(move);
+			else if(x != 600 | y != 600 && move.getStatus() != turn && 
+					jump.getStatus() == PositionStatus.Empty)
+			{
+				jumps.add(jump);
+				noJumps = false;
+			}
+		}
+		if(noJumps)
 			return moves;
-		noJumps = false;
 		return jumps;
 	}
 }

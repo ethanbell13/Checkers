@@ -15,4 +15,5 @@ public class Piece
 	public Circle getCircle() {return circle;}
 	public String getPositionDictionaryKey() 
 	{return "" + (circle.getCenterX() - 40) + (circle.getCenterY() -  40);}
+	public String getPieceFinderKey() {return "" + circle.getCenterX() + circle.getCenterY();}
 }

@@ -30,12 +30,14 @@ public class Main extends Application
 	private Button blackStarts = new Button("Black Starts");
 	private Stage secondaryStage = new Stage();
 	
-	private Circle selectedCircle;
+//	private Circle selectedCircle;
 	private int index = 0;
-	private double originX = 0;
-	private double originY = 0;
+	private double anchorX;
+	private double anchorY;
 	private Piece removedPiece = null;
 	private ArrayList<Position> highlightedSquares = null;
+	private boolean pieceSelected = false;
+	private ArrayList<Pair<Piece, ArrayList<Position>>> moves = new ArrayList<>();
 	
 	@Override
 	public void start(Stage stage) 
@@ -57,6 +59,22 @@ public class Main extends Application
 		newGameButton.setOnAction(e -> {
 			newGameHandler();
 			buttons.getChildren().remove(newGameButton);});
+		scene.setOnMousePressed(e -> 
+		{
+			for(int i = 0; i < moves.size(); i++) 
+			{
+				if(moves.get(i).getKey().getCircle().contains(e.getX(), e.getY()))
+				{
+					movePiece(moves.get(i));
+					anchorX = 0 + moves.get(i).getKey().getCircle().getCenterX();
+					anchorY = 0 + moves.get(i).getKey().getCircle().getCenterY();
+					break;
+				}
+				else if(i + 1 == moves.size())
+					e.consume();
+			}
+		});
+		
 		secondaryStage.setScene(secondaryScene);
 		secondaryStage.initModality(Modality.APPLICATION_MODAL);
 		stage.setScene(scene);
@@ -74,11 +92,13 @@ public class Main extends Application
 			currentGame.turn = PositionStatus.Red;
 			boardGroup.setRotate(0);
 			secondaryStage.hide();
-			beginGame();});
+			moves = currentGame.scanForMoves();});
 		blackStarts.setOnAction(e -> {
 			currentGame.turn = PositionStatus.Black;
 			boardGroup.setRotate(180);
-			secondaryStage.hide();});
+			secondaryStage.hide();
+			moves = currentGame.scanForMoves();});
+		highlightJumps();
 		loadPieces();
 	}
 	private void loadPieces() 
@@ -88,77 +108,69 @@ public class Main extends Application
 		for(int i  = 0; i < currentGame.blackPieces.size(); i++)
 			boardGroup.getChildren().add(currentGame.blackPieces.get(i).getCircle());
 	}
-	private void beginGame() 
+	private void highlightJumps() 
+	{
+		if(!currentGame.noJumps)
+		{
+			for(int i = 0; i < moves.size(); i++) 
+			{   
+				currentGame.positions[currentGame.positionFinder.get(moves.get
+						(i).getKey().getPositionDictionaryKey())].getSquare().setFill(Color.GREEN);
+				highlightedSquares = moves.get(i).getValue();
+				highlightedSquares.add(currentGame.positions[currentGame.positionFinder.get(moves.get
+						(i).getKey().getPositionDictionaryKey())]);
+				for(int j = 0; j < highlightedSquares.size(); j++)
+					highlightedSquares.get(j).getSquare().setFill(Color.GREEN);
+			}
+		}
+	}
+	private void movePiece(Pair<Piece, ArrayList<Position>> move) 
 	{	
-		final ArrayList<Pair<Piece, ArrayList<Position>>> moves = currentGame.scanForAllMoves();
-			if(!currentGame.noJumps)
+		move.getKey().getCircle().setOnMouseDragged(dragEvent -> 
+		{
+			Circle selectedCircle = move.getKey().getCircle();
+			selectedCircle.setCenterX(dragEvent.getX());
+			selectedCircle.setCenterY(dragEvent.getY());
+		});
+		move.getKey().getCircle().setOnMouseReleased(releaseEvent -> 
+		{
+			Circle selectedCircle = move.getKey().getCircle();
+			for(int i = 0; i < move.getValue().size(); i++) 
 			{
-				for(int i = 0; i < moves.size(); i++) 
-				{   
-					currentGame.positions[currentGame.positionFinder.get(moves.get
-							(i).getKey().getPositionDictionaryKey())].getSquare().setFill(Color.GREEN);
-					highlightedSquares = moves.get(i).getValue();
-					highlightedSquares.add(currentGame.positions[currentGame.positionFinder.get(moves.get
-							(i).getKey().getPositionDictionaryKey())]);
-					for(int j = 0; j < highlightedSquares.size(); j++)
-						highlightedSquares.get(j).getSquare().setFill(Color.GREEN);
-					
+				if(move.getValue().get(i).getSquare().contains(releaseEvent.getX(), releaseEvent.getY())) 
+				{
+					currentGame.movePiece(move.getKey(), anchorX, anchorY, 
+							currentGame.turn, move.getValue().get(i));
+					if(!currentGame.noJumps) 
+					{
+						//RemovedPiece is being evaluated at null. Must resolve.
+						removedPiece = currentGame.pieceFinder.get
+						("" + ((anchorX + selectedCircle.getCenterX())) / 2 + 
+								((anchorY + selectedCircle.getCenterY()) / 2));
+						boardGroup.getChildren().remove(removedPiece.getCircle());
+						if(currentGame.turn == PositionStatus.Black) 
+							currentGame.removePiece(removedPiece, anchorX, anchorY, PositionStatus.Red);
+						else
+							currentGame.removePiece(removedPiece, anchorX, anchorY, PositionStatus.Black);
+						//boardGroup.getChildren().remove(removedPiece.getCircle());
+						for(int j = 0; j < highlightedSquares.size(); j++)
+							highlightedSquares.get(j).getSquare().setFill(Color.BROWN);
+					}
+					if(currentGame.turn == PositionStatus.Black)
+						currentGame.turn = PositionStatus.Red;
+					else
+						currentGame.turn = PositionStatus.Black;
+					currentGame.noJumps = true;
+					moves = currentGame.scanForMoves();
+					highlightJumps();
+					return;
+				}
+				else if(i + 1 == move.getValue().size()) 
+				{
+					selectedCircle.setCenterX(anchorX + 0);
+					selectedCircle.setCenterY(anchorY + 0);
 				}
 			}
-			scene.setOnMousePressed(e -> 
-			{	
-				for(int i = 0; i < moves.size(); i++) 
-				{
-					if(e.getTarget() == moves.get(i).getKey().getCircle())
-					{
-						selectedCircle = moves.get(i).getKey().getCircle();
-						originX = selectedCircle.getCenterX() + 0;
-						originY = selectedCircle.getCenterY() + 0;
-						index = i;
-						break;
-					}
-				} 
-				scene.setOnMouseDragged(dragEvent -> 
-				{
-					if(e.getTarget() == selectedCircle) 
-					
-							selectedCircle.setCenterX(dragEvent.getX());
-							selectedCircle.setCenterY(dragEvent.getY());
-							scene.setOnMouseReleased(releaseEvent -> 
-							{
-								for(int i = 0; i < moves.get(index).getValue().size(); i++) 
-								{
-									Rectangle selectedSquare = moves.get(index).getValue().get(i).getSquare();
-									if(selectedSquare.contains(releaseEvent.getX(), releaseEvent.getY())) 
-									{
-										selectedCircle.setCenterX(selectedSquare.getX() + 40);
-										selectedCircle.setCenterY(selectedSquare.getY() + 40);
-										if(!currentGame.noJumps) 
-										{
-											removedPiece = currentGame.pieceFinder.get
-											("" + ((originX + selectedCircle.getCenterX())) / 2 
-													+ ((originY + selectedCircle.getCenterY()) / 2));
-											if(currentGame.turn == PositionStatus.Black) 
-												currentGame.redPieces.remove(removedPiece);
-											else
-												currentGame.blackPieces.remove(removedPiece);
-											boardGroup.getChildren().remove(removedPiece.getCircle());
-											for(int j = 0; j < highlightedSquares.size(); j++)
-												highlightedSquares.get(j).getSquare().setFill(Color.BROWN);
-										}
-										if(currentGame.turn == PositionStatus.Black)
-											currentGame.turn = PositionStatus.Red;
-										else
-											currentGame.turn = PositionStatus.Black;
-										return;
-									}
-								}
-								selectedCircle.setCenterX(originX);
-								selectedCircle.setCenterY(originY);
-							});
-					
-				});
-				
-			});	
+		});	
 	}
 }

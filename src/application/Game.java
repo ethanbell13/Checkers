@@ -1,114 +1,89 @@
 package application;
 
+import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
-
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
-import javafx.scene.shape.Rectangle;
 import javafx.util.Pair;
 
-public class Game 
+public class Game implements Serializable
 {
 	//Time is being spent finding bugs in code. Create unit tests that identify where the code is not working.
-	Position[] positions = new Position[32];
-	ArrayList<Piece> redPieces = new ArrayList<>();
-	ArrayList<Piece> blackPieces = new ArrayList<>();
-	HashMap<String, Integer> positionFinder =  new HashMap<>();
-	HashMap<String, Piece> pieceFinder = new HashMap<>();
-	PositionStatus turn = PositionStatus.Empty;
-	boolean noJumps = true;
+	private PositionStatus[][] positions = new PositionStatus[4][8];
+	private ArrayList<Piece> redPieces = new ArrayList<>();
+	private ArrayList<Piece> blackPieces = new ArrayList<>();
+//	private HashMap<String, Integer> positionFinder =  new HashMap<>();
+//	private HashMap<String, Piece> pieceFinder = new HashMap<>();
+	private Team turn;
+	private boolean noJumps = true;
 	public Game() 
 	{
-		double x = 160;
-		double y = 80;
-		//Forms all playable positions as brown squares on the board.
-		//Starts at top left and then moves one row down 
-		//after every 4 squares, 
-		for(int i = 0; i < 32; i++) 
-		{
-			positions[i] = new Position(new Rectangle(x, y, 79, 79), PositionStatus.Empty);
-			positions[i].getSquare().setFill(Color.BROWN);
-			positions[i].getSquare().setStyle("-fx-stroke: yellow; -fx-stroke-width: 2;");
-			positionFinder.put("" + x + y, i);
-			x += 160;
-			if((i + 1) % 8 == 0)
-			{
-				y += 80;
-				x = 160;
-			}
-			else if((i + 1) % 4 == 0)
-			{
-				y += 80;
-				x = 80;
-			}
-		}
-	}
-	public void NewGame() 
-	{
-		int x = 0;
-		int y = 120;
 		for(int i = 0; i < 4; i++) 
 		{
 			for(int j = 0; j < 8; j++) 
 			{
-				if(j % 2 == 1)
-					x = 120;
-				else
-					x = 200;
-				if(j < 3) 
-				{
-					blackPieces.add(new Piece(new Circle(i * 160 + x, 
-							j * 80 + y, 30, Color.BLACK), PieceStatus.Stone));
-				}
-							
-				else if(j > 4)
-				{
-					redPieces.add(new Piece(new Circle(i * 160 + x, 
-							j * 80 + y, 30, Color.RED), PieceStatus.Stone));
-				}
-							
+				positions[i][j] = PositionStatus.Empty; 
 			}
 		}
-		for(int i = 0; i < 12; i++)
+	}
+	public void setTurn(Team teamIn) {turn = teamIn;}
+	public Team getTeam() {return turn;}
+	public ArrayList<Piece> getRedPieces(){return redPieces;}
+	public ArrayList<Piece> getBlackPieces(){return blackPieces;}
+	public boolean checkForJumps() {return noJumps;}
+	public void NewGame() 
+	{
+		int blackPos = 0;
+		int redPos = 0;
+		for(int i = 0; i < 4; i++) 
 		{
-			pieceFinder.put(blackPieces.get(i).getPieceFinderKey(), null);
-			pieceFinder.put(redPieces.get(i).getPieceFinderKey(), null);
+			for(int j = 0; j < 8; j++) 
+			{
+				if(j < 3)
+				{
+					blackPieces.add(new Piece(i, j, blackPos, PieceStatus.Stone, Team.Black));
+					blackPos++;
+					positions[i][j] = PositionStatus.Black;
+				}
+				else if(j > 4)
+				{
+					redPieces.add(new Piece(i, j, redPos, PieceStatus.Stone, Team.Red));
+					redPos++;
+					positions[i][j] = PositionStatus.Red;
+				}
+			}
 		}
-		updateBoard();
 	}
-	public void updateBoard() 
+	public void movePiece(Piece piece, int x, int y, Team team) 
 	{
-		for(int i = 0; i < redPieces.size(); i++)
-			positions[positionFinder.get(redPieces.get(i).getPositionDictionaryKey())].setStatus(PositionStatus.Red);
-		for(int i = 0; i < blackPieces.size(); i++)
-			positions[positionFinder.get(blackPieces.get(i).getPositionDictionaryKey())].setStatus(PositionStatus.Black);
+		positions[piece.getX()][piece.getY()] = PositionStatus.Empty;
+		if(team == Team.Red) 
+		{
+			positions[x][y] = PositionStatus.Red;
+			redPieces.get(redPieces.indexOf(piece)).setX(x);
+			redPieces.get(redPieces.indexOf(piece)).setY(y);
+		}
+		else 
+		{
+			positions[x][y] = PositionStatus.Black;
+			blackPieces.get(blackPieces.indexOf(piece)).setX(x);
+			blackPieces.get(blackPieces.indexOf(piece)).setY(y);
+		}
 	}
-	public void movePiece(Piece piece, double anchorX, double anchorY, PositionStatus team, Position position) 
+	public void removePiece(Piece piece, Team team) 
 	{
-		positions[positionFinder.get("" + (anchorX - 40) + (anchorY - 40))].setStatus(PositionStatus.Empty);
-		position.setStatus(team);
-		pieceFinder.remove("" + anchorX + anchorY);
-		piece.getCircle().setCenterX(position.getSquare().getX() + 40);
-		piece.getCircle().setCenterY(position.getSquare().getY() + 40);
-		pieceFinder.put(piece.getPieceFinderKey(), piece);
-	}
-	public void removePiece(Piece piece, double anchorX, double anchorY, PositionStatus team) 
-	{
-		if(team == PositionStatus.Red)
+		if(team == Team.Red)
 			redPieces.remove(piece);
 		else
 			blackPieces.remove(piece);
-		positions[positionFinder.get("" + (anchorX - 40) + (anchorY - 40))].setStatus(PositionStatus.Empty);
-		pieceFinder.remove(piece.getPieceFinderKey());
 	}
-	public ArrayList<Pair<Piece, ArrayList<Position>>> scanForMoves() 
+	public ArrayList<Pair<Piece, ArrayList<Integer>>> scanForMoves() 
 	{
 		PositionStatus otherTeam;
 		ArrayList<Piece> pieces = new ArrayList<>();
-		ArrayList<Pair<Piece, ArrayList<Position>>> allMoves = new ArrayList<>();
-		ArrayList<Pair<Piece, ArrayList<Position>>> allJumps = new ArrayList<>();
-		if(turn == PositionStatus.Red)
+		ArrayList<Pair<Piece, ArrayList<Integer>>> moves = new ArrayList<>();
+		ArrayList<Pair<Piece, ArrayList<Integer>>> jumps = new ArrayList<>();
+		if(turn == Team.Red)
 		{
 			pieces = redPieces;
 			otherTeam = PositionStatus.Black;
@@ -120,69 +95,81 @@ public class Game
 		}
 		for(int i = 0; i < pieces.size(); i++) 
 		{
-			ArrayList<Position> moves = new ArrayList<>();
-			ArrayList<Position> jumps = new ArrayList<>();
-			double x = pieces.get(i).getCircle().getCenterX();
-			double y = pieces.get(i).getCircle().getCenterY();
-			Position move = null;
-			if(x != 120 && y != 120 && (pieces.get(i).getStatus() == PieceStatus.King || turn == PositionStatus.Red)) 
+			PieceStatus pieceStatus = pieces.get(i).getPieceStatus();
+			int x = pieces.get(i).getX();
+			int y = pieces.get(i).getY();
+			if((x - (y % 2)) != -1 && y > 0 && (turn == Team.Red || pieceStatus == PieceStatus.King))
 			{
-				move = positions[positionFinder.get("" + (x - 120) + (y - 120))];
-				if(noJumps && move.getStatus() == PositionStatus.Empty) 
-					moves.add(move);
-				else if(x != 200 && y != 200 && move.getStatus() == otherTeam && 
-						positions[positionFinder.get("" + (x - 200) + (y - 200))].getStatus() == PositionStatus.Empty)
+				PositionStatus test = positions[x - (y % 2)][y - 1];
+				if(noJumps == true && positions[x - (y % 2)][y - 1] == PositionStatus.Empty)
+					moves.add(new Pair<>(pieces.get(i), new ArrayList<>(Arrays.asList(x, y, x - (y % 2), y - 1))));
+				else if(y > 1 && x > 0 && positions[x - (y % 2)][y - 1] == otherTeam 
+						&& positions[x - 1][y - 2] == PositionStatus.Empty)
 				{
-					jumps.add(positions[positionFinder.get("" + (x - 200) + (y - 200))]);
 					noJumps = false;
+					jumps.add(new Pair<>(pieces.get(i), 
+							new ArrayList<>(Arrays.asList(x, y, x - (y % 2), y - 1, x - 1, y - 2))));
 				}
 			}
-			
-			if(x != 680 && y != 120 && (pieces.get(i).getStatus() == PieceStatus.King || turn == PositionStatus.Red)) 
+			if((x - y % 2) != 3 && y > 0 && (turn == Team.Red || pieceStatus == PieceStatus.King))
 			{
-				move = positions[positionFinder.get("" + (x + 40) + (y - 120))];
-				if(noJumps && move.getStatus() == PositionStatus.Empty) 
-					moves.add(move);
-				else if(x != 600 && y != 200 && move.getStatus() == otherTeam &&
-						positions[positionFinder.get("" + (x + 120) + (y - 200))].getStatus() == PositionStatus.Empty)
+				if(noJumps == true && positions[x - (y % 2) + 1][y - 1] == PositionStatus.Empty)
+					moves.add(new Pair<>(pieces.get(i), new ArrayList<>(Arrays.asList(x, y, x - (y % 2) + 1, y - 1))));
+				else if(y > 1 && positions[x - (y % 2) + 1][y - 1] == otherTeam 
+						&& positions[x + 1][y - 2] == PositionStatus.Empty)
 				{
-					jumps.add(positions[positionFinder.get("" + (x + 120) + (y - 200))]);
 					noJumps = false;
+					jumps.add(new Pair<>(pieces.get(i), 
+							new ArrayList<>(Arrays.asList(x, y, x - (y % 2) + 1, y - 1, x + 1, y - 2 ))));
 				}
 			}
-			
-			if(x != 120 && y != 680 && (pieces.get(i).getStatus() == PieceStatus.King || turn == PositionStatus.Black)) 
+			if((x - (y % 2)) != -1 && y < 7 && (turn == Team.Black || pieceStatus == PieceStatus.King))
 			{
-				move = positions[positionFinder.get("" + (x - 120) + (y + 40))];
-				if(noJumps && move.getStatus() == PositionStatus.Empty) 
-					moves.add(move);
-				else if(x != 200 && y != 600 && move.getStatus() == otherTeam &&
-						positions[positionFinder.get("" + (x - 200) + (y + 120))].getStatus() == PositionStatus.Empty)
+				if(noJumps == true && positions[x - (y % 2)][y + 1] == PositionStatus.Empty)
+					moves.add(new Pair<>(pieces.get(i), new ArrayList<>(Arrays.asList(x, y, x - (y % 2), y + 1))));
+				else if(y < 6 && x > 0 && positions[x - (y % 2)][y + 1] == otherTeam 
+						&& positions[x - 1][y + 2] == PositionStatus.Empty)
 				{
-					jumps.add(positions[positionFinder.get("" + (x - 200) + (y + 120))]);
 					noJumps = false;
+					jumps.add(new Pair<>(pieces.get(i), 
+							new ArrayList<>(Arrays.asList(x, y, x - (y % 2), y + 1, x - 1, y + 2))));
 				}
 			}
-			
-			if(x != 680 && y != 680 && (pieces.get(i).getStatus() == PieceStatus.King || turn == PositionStatus.Black)) 
+			if((x - y % 2) != 3 && y < 7 && (turn == Team.Black || pieceStatus == PieceStatus.King))
 			{
-				move = positions[positionFinder.get("" + (x + 40) + (y + 40))];
-				if(jumps.size() == 0 && move.getStatus() == PositionStatus.Empty) 
-					moves.add(move);
-				else if(x != 600 && y != 600 && move.getStatus() == otherTeam && 
-						positions[positionFinder.get("" + (x + 120) + (y + 120))].getStatus() == PositionStatus.Empty)
+				if(noJumps == true && positions[x - (y % 2) + 1][y + 1] == PositionStatus.Empty)
+					moves.add(new Pair<>(pieces.get(i), new ArrayList<>(Arrays.asList(x, y, x - (y % 2) + 1, y + 1))));
+				else if(x != 3 && y < 6 && positions[x - (y % 2) + 1][y + 1] == otherTeam 
+						&& positions[x + 1][y + 2] == PositionStatus.Empty)
 				{
-					jumps.add(positions[positionFinder.get("" + (x + 120) + (y + 120))]);
 					noJumps = false;
+					jumps.add(new Pair<>(pieces.get(i), 
+							new ArrayList<>(Arrays.asList(x, y, x - (y % 2) + 1, y + 1, x + 1, y + 2 ))));
 				}
 			}
-			if(!noJumps && jumps.size() > 0)
-				allJumps.add(new Pair<>(pieces.get(i), jumps));
-			else if(noJumps && moves.size() > 0)
-				allMoves.add(new Pair<>(pieces.get(i), moves));
 		}
-		if(noJumps)
-			return allMoves;
-		return allJumps;
+		if(!noJumps) 
+		{
+			noJumps = true;
+			return jumps;
+		}
+		return moves;
+	}
+	public void setPosition(int x, int y, PositionStatus status) 
+	{
+		positions[x][y] = status;
+	}
+	public void addPiece(Piece piece) 
+	{
+		if(piece.getTeam() == Team.Red) 
+		{
+			redPieces.add(piece);
+			positions[piece.getX()][piece.getY()] = PositionStatus.Red;
+		}
+		else
+		{
+			blackPieces.add(piece);
+			positions[piece.getX()][piece.getY()] = PositionStatus.Black;
+		}
 	}
 }

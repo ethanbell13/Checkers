@@ -17,6 +17,6 @@ public class Position
 		square = squareIn;
 	}
 	public PositionStatus getStatus() {return status;}
-	public Rectangle getSquare() {return square;}
+	public Rectangle getCoordinates() {return square;}
 	public void setStatus(PositionStatus statusIn) {status = statusIn;}
 }

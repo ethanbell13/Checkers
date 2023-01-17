@@ -21,7 +21,7 @@ public class Main extends Application
 	
 	private Button newGameButton = new Button("New Game");
 	private Button loadGameButton = new Button("Load Game");
-	//private Button saveGameButton = new Button("Save Game");
+	private Button saveGameButton = new Button("Save Game");
 	private Scene scene;
 	private Group boardGroup = new Group();
 	private Pane root = new Pane();
@@ -162,12 +162,12 @@ public class Main extends Application
 			if(x == moves.get(i).get(0) && y == moves.get(i).get(1))
 				movesForPiece.add(moves.get(i));
 		}
-		selectedPiece.getCircle().setOnMouseDragged(dragEvent -> 
+		selectedPiece.getPiece().setOnMouseDragged(dragEvent -> 
 		{
 			if(selectedPiece != null)
 				selectedPiece.setCoordinatesWithDouble(dragEvent.getX(), dragEvent.getY());
 		});
-		selectedPiece.getCircle().setOnMouseReleased(releaseEvent -> 
+		selectedPiece.getPiece().setOnMouseReleased(releaseEvent -> 
 		{
 			for(int i = 0; i < movesForPiece.size(); i++) 
 			{

@@ -1,5 +1,11 @@
 package application;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -14,10 +20,11 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 
 public class Main extends Application
 {	
-	private Game currentGame = new Game();
+	private Game currentGame;
 	
 	private Button newGameButton = new Button("New Game");
 	private Button loadGameButton = new Button("Load Game");
@@ -25,9 +32,15 @@ public class Main extends Application
 	private Scene scene;
 	private Group boardGroup = new Group();
 	private Pane root = new Pane();
+	
 	private Button redStarts = new Button("Red Starts");
 	private Button blackStarts = new Button("Black Starts");
 	private Stage secondaryStage = new Stage();
+	
+	private Button yes = new Button("Yes");
+	private Button no = new Button("No");
+	private Label newGameLabel = new Label("Do you want to start a new game? Any unsaved progress will be lost.");
+	private Stage thirdStage = new Stage();
 	
 	private PieceInterface selectedPiece = null;
 	private HashMap<String, Rectangle> rectangleFinder = new HashMap<>();
@@ -63,17 +76,38 @@ public class Main extends Application
 				boardGroup.getChildren().add(rectangles[i * 4 + j]);
 			}
 		}
-		HBox buttons = new HBox(10, newGameButton, loadGameButton);
-		buttons.setLayoutX(320);
+		HBox buttons = new HBox(10, newGameButton, saveGameButton, loadGameButton);
+		buttons.setLayoutX(280);
 		buttons.setLayoutY(0);
 		root.getChildren().addAll(boardGroup, buttons);
 		scene = new Scene(root, 800, 800);
+		stage.setScene(scene);
+		
 		VBox box = new VBox();
 		box.getChildren().addAll(redStarts, blackStarts);
 		Scene secondaryScene = new Scene(box, 100, 50);
+		secondaryStage.setScene(secondaryScene);
+		secondaryStage.initModality(Modality.APPLICATION_MODAL);
+		
+		VBox newGameBox = new VBox();
+		newGameBox.getChildren().addAll(newGameLabel, yes, no);
+		Scene thirdScene = new Scene(newGameBox, 375, 75);
+		thirdStage.setScene(thirdScene);
+		thirdStage.initModality(Modality.APPLICATION_MODAL);
+		
 		newGameButton.setOnAction(e -> {
-			newGameHandler();
-			buttons.getChildren().remove(newGameButton);});
+			if(currentGame != null) 
+				thirdStage.show();
+			else
+				newGameHandler();});
+		yes.setOnAction(e -> {
+			thirdStage.hide();
+			clearBoard();
+			newGameHandler();});
+		no.setOnAction(e -> {
+			thirdStage.hide();});
+		saveGameButton.setOnAction(e -> {saveGameHandler();});
+		loadGameButton.setOnAction(e -> {loadGameHandler();});
 		scene.setOnMousePressed(e -> 
 		{
 			for(int i = 0; i < moves.size(); i++) 
@@ -91,10 +125,6 @@ public class Main extends Application
 					e.consume();
 			}
 		});
-		
-		secondaryStage.setScene(secondaryScene);
-		secondaryStage.initModality(Modality.APPLICATION_MODAL);
-		stage.setScene(scene);
 		stage.show();
 	} 
 	public static void main(String[] args) 
@@ -103,17 +133,16 @@ public class Main extends Application
 	}
 	private void newGameHandler() 
 	{
+		currentGame = new Game();
 		currentGame.NewGame();
 		secondaryStage.show();
 		redStarts.setOnAction(e -> {
 			currentGame.setTurn(Team.Red);
-			boardGroup.setRotate(0);
 			secondaryStage.hide();
 			moves = currentGame.scanForMoves();
 			highlightJumps();});
 		blackStarts.setOnAction(e -> {
 			currentGame.setTurn(Team.Black);
-			boardGroup.setRotate(180);
 			secondaryStage.hide();
 			moves = currentGame.scanForMoves();
 			highlightJumps();});
@@ -227,5 +256,52 @@ public class Main extends Application
 			selectedPiece = null;
 			movesForPiece = new ArrayList<>();
 		});	
+	}
+	private void saveGameHandler() 
+	{
+		try(
+				FileOutputStream gameFile = new FileOutputStream("./game.dat");
+				ObjectOutputStream gameStream = new ObjectOutputStream(gameFile);)
+		{
+			gameStream.writeObject(currentGame);
+			
+		}
+		catch(IOException e){System.out.println("There was a problem writing the file");}
+	}
+	private void loadGameHandler() 
+	{
+		try(
+				FileInputStream gameFile = new FileInputStream("./game.dat");
+				ObjectInputStream gameStream = new ObjectInputStream(gameFile);
+			)
+		{
+			currentGame = (Game) gameStream.readObject();
+			clearBoard();
+			loadPieces();
+			moves = currentGame.scanForMoves();
+			highlightJumps();
+		}
+		catch(FileNotFoundException e)
+		{
+			System.out.println("\nNo file was read");
+		}
+		catch(ClassNotFoundException e) 
+		{
+			System.out.println("\nUnreadable file format");
+		}
+		
+		catch(IOException e)
+		{
+			System.out.println("\nThere was a problem reading the file");
+		}
+	}
+	private void clearBoard() 
+	{
+		for(int i = 0; i < pieces.size(); i++)
+			boardGroup.getChildren().remove(pieces.get(i).getPiece());
+		pieces = new ArrayList<>();
+		pieceFinder = new HashMap<>();
+		for(int j = 0; j < highlightedSquares.size(); j++)
+			highlightedSquares.get(j).setFill(Color.BROWN);
 	}
 }

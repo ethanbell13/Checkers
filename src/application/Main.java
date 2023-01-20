@@ -42,6 +42,9 @@ public class Main extends Application
 	private Label newGameLabel = new Label("Do you want to start a new game? Any unsaved progress will be lost.");
 	private Stage thirdStage = new Stage();
 	
+	private Label winnerLabel = new Label();
+	private Stage fourthStage = new Stage();
+	
 	private PieceInterface selectedPiece = null;
 	private HashMap<String, Rectangle> rectangleFinder = new HashMap<>();
 	private HashMap<String, PieceInterface> pieceFinder = new HashMap<>();
@@ -60,6 +63,7 @@ public class Main extends Application
 		board.setFill(Color.DARKKHAKI);
 		board.setStyle("-fx-stroke: yellow; -fx-stroke-width: 2;");
 		boardGroup.getChildren().addAll(board);
+		//Loads playable squares onto board.
 		int x = 160;
 		for(int i = 0; i < 8; i++) 
 		{
@@ -76,6 +80,7 @@ public class Main extends Application
 				boardGroup.getChildren().add(rectangles[i * 4 + j]);
 			}
 		}
+		
 		HBox buttons = new HBox(10, newGameButton, saveGameButton, loadGameButton);
 		buttons.setLayoutX(280);
 		buttons.setLayoutY(0);
@@ -95,6 +100,10 @@ public class Main extends Application
 		thirdStage.setScene(thirdScene);
 		thirdStage.initModality(Modality.APPLICATION_MODAL);
 		
+		Scene fourthScene = new Scene(winnerLabel, 200, 200);
+		fourthStage.setScene(fourthScene);
+		fourthStage.initModality(Modality.APPLICATION_MODAL);
+		
 		newGameButton.setOnAction(e -> {
 			if(currentGame != null) 
 				thirdStage.show();
@@ -108,6 +117,7 @@ public class Main extends Application
 			thirdStage.hide();});
 		saveGameButton.setOnAction(e -> {saveGameHandler();});
 		loadGameButton.setOnAction(e -> {loadGameHandler();});
+		//Waits for player to select a piece that elibile to move and then passes to movePiece method.
 		scene.setOnMousePressed(e -> 
 		{
 			for(int i = 0; i < moves.size(); i++) 
@@ -183,80 +193,6 @@ public class Main extends Application
 				highlightedSquares.get(i).setFill(Color.GREEN);
 		}
 	}
-	private void movePiece(int x, int y) 
-	{	
-		movesForPiece = new ArrayList<>();
-		for(int i = 0; i < moves.size(); i++)
-		{
-			if(x == moves.get(i).get(0) && y == moves.get(i).get(1))
-				movesForPiece.add(moves.get(i));
-		}
-		selectedPiece.getPiece().setOnMouseDragged(dragEvent -> 
-		{
-			if(selectedPiece != null)
-				selectedPiece.setCoordinatesWithDouble(dragEvent.getX(), dragEvent.getY());
-		});
-		selectedPiece.getPiece().setOnMouseReleased(releaseEvent -> 
-		{
-			for(int i = 0; i < movesForPiece.size(); i++) 
-			{
-				Rectangle destRectangle = rectangleFinder.get("" + 
-						movesForPiece.get(i).get(movesForPiece.get(i).size() - 2) + 
-						movesForPiece.get(i).get(movesForPiece.get(i).size() - 1));
-				if(destRectangle.contains(releaseEvent.getX(), releaseEvent.getY())) 
-				{
-					int destX = movesForPiece.get(i).get(movesForPiece.get(i).size() - 2);
-					int destY = movesForPiece.get(i).get(movesForPiece.get(i).size() - 1);
-					pieceFinder.remove("" + x + y);
-					selectedPiece.setCoordinatesWithDouble(destRectangle.getX() + 40, destRectangle.getY() + 40);
-					if(destY == 0 && currentGame.getPositions()[x][y] == Status.Red) 
-					{
-						pieces.remove(selectedPiece);
-						boardGroup.getChildren().remove(selectedPiece.getPiece());
-						pieces.add(new KingGroup(destX, destY, Status.RedKing));
-						selectedPiece = pieces.get(pieces.size() - 1);
-						boardGroup.getChildren().add(selectedPiece.getPiece());
-					}
-					else if(destY == 7 && currentGame.getPositions()[x][y] == Status.Black) 
-					{
-						pieces.remove(selectedPiece);
-						boardGroup.getChildren().remove(selectedPiece.getPiece());
-						pieces.add(new KingGroup(destX, destY, Status.BlackKing));
-						selectedPiece = pieces.get(pieces.size() - 1);
-						boardGroup.getChildren().add(selectedPiece.getPiece());
-					}
-					currentGame.movePiece(x, y, destX, destY, currentGame.getPositions()[x][y]);
-					pieceFinder.put("" + destX + destY, selectedPiece);
-					if(movesForPiece.get(i).size() == 6)
-					{
-						int removedPieceX = movesForPiece.get(i).get(movesForPiece.get(i).size() - 4);
-						int removedPieceY = movesForPiece.get(i).get(movesForPiece.get(i).size() - 3);
-						currentGame.removePiece(removedPieceX, removedPieceY, currentGame.getPositions()[removedPieceX][removedPieceY]);
-						boardGroup.getChildren().remove(pieceFinder.get
-								("" + removedPieceX + removedPieceY).getPiece());
-						pieceFinder.remove("" + removedPieceX + removedPieceY);
-						moves = currentGame.scanPieceForJumps(destX, destY);
-						for(int j = 0; j < highlightedSquares.size(); j++)
-							highlightedSquares.get(j).setFill(Color.BROWN);
-						highlightJumps();
-						if(moves.get(0).size() == 6)
-							break;
-					}
-					if(currentGame.getTurn() == Team.Black)
-						currentGame.setTurn(Team.Red);
-					else
-						currentGame.setTurn(Team.Black);
-					moves = currentGame.scanForMoves();
-					highlightJumps();
-					break;
-				}
-				else if(i + 1 == movesForPiece.size()) 
-					selectedPiece.setCoordinatesWithDouble(anchorX + 0, anchorY + 0);
-			}
-			selectedPiece = null;
-			movesForPiece = new ArrayList<>();
-		});	
-	}
 	private void saveGameHandler() 
 	{
 		try(
@@ -301,7 +237,98 @@ public class Main extends Application
 			boardGroup.getChildren().remove(pieces.get(i).getPiece());
 		pieces = new ArrayList<>();
 		pieceFinder = new HashMap<>();
-		for(int j = 0; j < highlightedSquares.size(); j++)
-			highlightedSquares.get(j).setFill(Color.BROWN);
+		if(highlightedSquares != null) 
+		{
+			for(int j = 0; j < highlightedSquares.size(); j++)
+				highlightedSquares.get(j).setFill(Color.BROWN);
+		}
+	}
+	private void declareWinner() 
+	{
+		moves = new ArrayList<>();
+		if(currentGame.getRedCount() == 0)
+			winnerLabel.setText("Black Wins!!!");
+		else
+			winnerLabel.setText("Red Wins!!!");
+		fourthStage.show();
+	}
+	private void movePiece(int x, int y) 
+	{	
+		movesForPiece = new ArrayList<>();
+		for(int i = 0; i < moves.size(); i++)
+		{
+			if(x == moves.get(i).get(0) && y == moves.get(i).get(1))
+				movesForPiece.add(moves.get(i));
+		}
+		selectedPiece.getPiece().setOnMouseDragged(dragEvent -> 
+		{
+			if(selectedPiece != null)
+				selectedPiece.setCoordinatesWithDouble(dragEvent.getX(), dragEvent.getY());
+		});
+		selectedPiece.getPiece().setOnMouseReleased(releaseEvent -> 
+		{
+			for(int i = 0; i < movesForPiece.size(); i++) 
+			{
+				Rectangle destRectangle = rectangleFinder.get("" + 
+						movesForPiece.get(i).get(movesForPiece.get(i).size() - 2) + 
+						movesForPiece.get(i).get(movesForPiece.get(i).size() - 1));
+				if(destRectangle.contains(releaseEvent.getX(), releaseEvent.getY())) 
+				{
+					int destX = movesForPiece.get(i).get(movesForPiece.get(i).size() - 2);
+					int destY = movesForPiece.get(i).get(movesForPiece.get(i).size() - 1);
+					pieceFinder.remove("" + x + y);
+					selectedPiece.setCoordinatesWithDouble(destRectangle.getX() + 40, destRectangle.getY() + 40);
+					if(destY == 0 && currentGame.getPositions()[x][y] == Status.Red) 
+					{
+						pieces.remove(selectedPiece);
+						boardGroup.getChildren().remove(selectedPiece.getPiece());
+						pieces.add(new KingGroup(destX, destY, Status.RedKing));
+						selectedPiece = pieces.get(pieces.size() - 1);
+						boardGroup.getChildren().add(selectedPiece.getPiece());
+					}
+					else if(destY == 7 && currentGame.getPositions()[x][y] == Status.Black) 
+					{
+						pieces.remove(selectedPiece);
+						boardGroup.getChildren().remove(selectedPiece.getPiece());
+						pieces.add(new KingGroup(destX, destY, Status.BlackKing));
+						selectedPiece = pieces.get(pieces.size() - 1);
+						boardGroup.getChildren().add(selectedPiece.getPiece());
+					}
+					currentGame.movePiece(x, y, destX, destY);
+					pieceFinder.put("" + destX + destY, selectedPiece);
+					if(movesForPiece.get(i).size() == 6)
+					{
+						int removedPieceX = movesForPiece.get(i).get(movesForPiece.get(i).size() - 4);
+						int removedPieceY = movesForPiece.get(i).get(movesForPiece.get(i).size() - 3);
+						currentGame.removePiece(removedPieceX, removedPieceY);
+						boardGroup.getChildren().remove(pieceFinder.get
+								("" + removedPieceX + removedPieceY).getPiece());
+						pieceFinder.remove("" + removedPieceX + removedPieceY);
+						moves = currentGame.scanPieceForJumps(destX, destY);
+						for(int j = 0; j < highlightedSquares.size(); j++)
+							highlightedSquares.get(j).setFill(Color.BROWN);
+						highlightJumps();
+						if(currentGame.getRedCount() == 0 || currentGame.getBlackCount() == 0) 
+						{
+							declareWinner();
+							break;
+						}
+						else if(moves.get(0).size() == 6)
+							break;
+					}
+					if(currentGame.getTurn() == Team.Black)
+						currentGame.setTurn(Team.Red);
+					else
+						currentGame.setTurn(Team.Black);
+					moves = currentGame.scanForMoves();
+					highlightJumps();
+					break;
+				}
+				else if(i + 1 == movesForPiece.size()) 
+					selectedPiece.setCoordinatesWithDouble(anchorX + 0, anchorY + 0);
+			}
+			selectedPiece = null;
+			movesForPiece = new ArrayList<>();
+		});	
 	}
 }

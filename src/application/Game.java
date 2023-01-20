@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+@SuppressWarnings("serial")
 public class Game implements Serializable
 {
 	private Status[][] positions = new Status[4][8];
@@ -49,24 +50,26 @@ public class Game implements Serializable
 			}
 		}
 	}
-	public void movePiece(int originX, int originY, int destX, int destY, Status status) 
+	public void movePiece(int originX, int originY, int destX, int destY) 
 	{
-		positions[originX][originY] = Status.Empty;
-		if(destY == 0 && status == Status.Red)
+		
+		if(destY == 0 && positions[originX][originY] == Status.Red)
 			positions[destX][destY] = Status.RedKing;
-		else if(destY == 7 && status == Status.Black)
+		else if(destY == 7 && positions[originX][originY] == Status.Black)
 			positions[destX][destY] = Status.BlackKing;
 		else
-			positions[destX][destY] = status;
+			positions[destX][destY] = positions[originX][originY];
+		positions[originX][originY] = Status.Empty;
 	}
-	public void removePiece(int x, int y, Status status) 
+	public void removePiece(int x, int y) 
 	{
-		positions[x][y] = Status.Empty;
-		if(status == Status.Black || status == Status.BlackKing)
+		if(positions[x][y] == Status.Black || positions[x][y] == Status.BlackKing)
 			blackCount --;
 		else
 			redCount --;
+		positions[x][y] = Status.Empty;
 	}
+	//Scans all pieces for moves.
 	public ArrayList<ArrayList<Integer>> scanForMoves() 
 	{
 		ArrayList<Status> otherTeam;
@@ -132,6 +135,7 @@ public class Game implements Serializable
 		}
 		return moves;
 	}
+	//Called after piece has jumped to check if more jumps are available.
 	public ArrayList<ArrayList<Integer>> scanPieceForJumps(int x, int y) 
 	{
 		ArrayList<Status> otherTeam;
@@ -156,4 +160,19 @@ public class Game implements Serializable
 			jumps.add(new ArrayList<>(Arrays.asList(0)));
 		return jumps;
 	}
+	@Override
+	public boolean equals(Object objectIn) 
+	{
+		Game gameIn = (Game)objectIn;
+		for(int x = 0; x < 4; x++) 
+		{
+			for(int y = 0; y < 8; y++)
+			if(gameIn.getPositions()[x][y] != positions[x][y])
+				return false;
+		}
+		if(redCount != gameIn.getRedCount() || blackCount != gameIn.getBlackCount())
+			return false;
+		return true;
+	}
+	
 }

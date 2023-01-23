@@ -7,11 +7,12 @@ import java.util.Arrays;
 @SuppressWarnings("serial")
 public class Game implements Serializable
 {
+	//Tracks if playable positions are empty and what type of piece they have if not empty.
 	private Status[][] positions = new Status[4][8];
-	private Team turn;
-	private boolean canJump = false;
 	private int redCount = 0;
 	private int blackCount = 0;
+	private Team turn;
+	private boolean canJump = false;
 	public Game() 
 	{
 		for(int i = 0; i < 4; i++) 

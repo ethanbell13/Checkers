@@ -82,7 +82,7 @@ class GameTests {
 		assertEquals(result, true);
 	}
 	@Test
-	void testScanForMovesWithJumpsForBlack() 
+	void testScanForMovesWithJumpsBlacksTurn() 
 	{
 		testGame.setPosition(1, 0, Status.Black);
 		testGame.setPosition(1, 2, Status.BlackKing);
@@ -98,7 +98,7 @@ class GameTests {
 		resultJumps.add(new ArrayList<>(Arrays.asList(1, 2, 2, 1, 2, 0)));
 		assertEquals(resultJumps, testJumps);
 	}
-	@Test void testScanForMovesWithJumpsForRed() 
+	@Test void testScanForMovesWithJumpsRedsTurn() 
 	{
 		testGame.setPosition(1, 0, Status.RedKing);
 		testGame.setPosition(1, 2, Status.Red);
@@ -115,7 +115,7 @@ class GameTests {
 		assertEquals(resultJumps, testJumps);
 	}
 	@Test
-	void testScanForMovesWithMovesForRed() 
+	void testScanForMovesRedsTurn() 
 	{
 		testGame.setPosition(0, 6, Status.RedKing);
 		testGame.setTurn(Team.Red);
@@ -129,7 +129,21 @@ class GameTests {
 		assertEquals(resultMoves, testMoves);
 	}
 	@Test
-	void testScanForMovesWithEdgeCases() 
+	void testScanForMovesBlacksTurn() 
+	{
+		testGame.setPosition(0, 6, Status.BlackKing);
+		testGame.setTurn(Team.Black);
+		ArrayList<ArrayList<Integer>> testMoves = new ArrayList<>();
+		testMoves = testGame.scanForMoves();
+		ArrayList<ArrayList<Integer>> resultMoves = new ArrayList<>();
+		resultMoves.add(new ArrayList<>(Arrays.asList(0, 6, 0, 5)));
+		resultMoves.add(new ArrayList<>(Arrays.asList(0, 6, 1, 5)));
+		resultMoves.add(new ArrayList<>(Arrays.asList(0, 6, 0, 7)));
+		resultMoves.add(new ArrayList<>(Arrays.asList(0, 6, 1, 7)));
+		assertEquals(resultMoves, testMoves);
+	}
+	@Test
+	void testScanForMovesWithEdgeCasesWithRed() 
 	{
 		testGame.setPosition(0, 1, Status.Red);
 		testGame.setPosition(3, 2, Status.Red);
@@ -153,6 +167,31 @@ class GameTests {
 		expectedResult.add(new ArrayList<>(Arrays.asList(3, 6, 3, 5)));
 		assertEquals(expectedResult, testResult);
 	}
+	@Test
+	void testScanForMovesWithEdgeCasesBlackTurn()
+	{
+		testGame.setPosition(2, 6, Status.Black);
+		testGame.setPosition(3, 6, Status.Black);
+		testGame.setPosition(0, 5, Status.Black);
+		testGame.setPosition(0, 1, Status.BlackKing);
+		testGame.setPosition(1, 1, Status.BlackKing);
+		testGame.setPosition(3, 2, Status.Black);
+		testGame.setPosition(0, 0, Status.Red);
+		testGame.setPosition(3, 7, Status.Red);
+		testGame.setTurn(Team.Black);
+		ArrayList<ArrayList<Integer>> testResult;
+		testResult = testGame.scanForMoves();
+		ArrayList<ArrayList<Integer>> expectedResult = new ArrayList<>();
+		expectedResult.add(new ArrayList<>(Arrays.asList(0, 1, 0 , 2)));
+		expectedResult.add(new ArrayList<>(Arrays.asList(0, 5, 0, 6)));
+		expectedResult.add(new ArrayList<>(Arrays.asList(1, 1, 1, 0)));
+		expectedResult.add(new ArrayList<>(Arrays.asList(1, 1, 0, 2)));
+		expectedResult.add(new ArrayList<>(Arrays.asList(1, 1, 1, 2)));
+		expectedResult.add(new ArrayList<>(Arrays.asList(2, 6, 2, 7)));
+		expectedResult.add(new ArrayList<>(Arrays.asList(3, 2, 3, 3)));
+
+		assertEquals(expectedResult, testResult);
+	}
 	@Test 
     void testScanPieceForJumps()
 	{
@@ -169,6 +208,17 @@ class GameTests {
 		expectedResult.add(new ArrayList<>(Arrays.asList(2, 4, 2, 5, 1, 6)));
 		expectedResult.add(new ArrayList<>(Arrays.asList(2, 4, 3, 5, 3, 6)));
 		assertEquals(expectedResult, testResult);
+	}
+	@Test
+	void testScanPieceForJumpsWithNoMoreJumps()
+	{
+		testGame.setPosition(2, 4, Status.RedKing);
+		testGame.setTurn(Team.Red);
+		ArrayList<ArrayList<Integer>> testResult = testGame.scanPieceForJumps(2, 4);
+		ArrayList<ArrayList<Integer>> expectedResult = new ArrayList<>();
+		expectedResult.add(new ArrayList<>(Arrays.asList(0)));
+		assertEquals(expectedResult, testResult);
+		
 	}
 
 }
